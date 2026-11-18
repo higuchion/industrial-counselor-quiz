@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#f7f8fa">
+<title>産業カウンセラー Quiz</title>
+<style>
+:root{--bg:#f7f8fa;--card:#fff;--ink:#202631;--muted:#6d7785;--line:#e5e9ef;--green:#16865d;--green-bg:#eaf6f0;--red:#c34b4b;--red-bg:#fff0f0;--blue:#386db5}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif}
+main{max-width:720px;margin:0 auto;padding:20px 16px 48px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:8px 0 22px}
+h1{font-size:20px;margin:0;font-weight:750;letter-spacing:.01em}.tag{font-size:12px;color:var(--green);background:var(--green-bg);padding:6px 10px;border-radius:99px}
+.panel,.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:14px;box-shadow:0 2px 10px #1a273308}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px}.muted{color:var(--muted);font-size:13px}
+.progress{height:7px;background:#edf0f3;border-radius:20px;overflow:hidden;margin:12px 0 20px}.bar{height:100%;background:var(--green);width:0;transition:width .2s}
+.kicker{text-align:center;color:var(--muted);font-size:13px;margin:0 0 10px}
+.question{font-size:19px;line-height:1.8;min-height:145px;display:flex;align-items:center;padding:20px 4px}
+.answers{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.answer{border:1px solid var(--line);background:white;border-radius:14px;padding:16px 10px;font-size:17px;font-weight:700;cursor:pointer}
+.answer strong{display:block;font-size:32px;margin-bottom:3px}.yes{color:var(--green)}.no{color:var(--red)}
+.answer:disabled{opacity:.55;cursor:default}.answer:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid #9ab9e8;outline-offset:2px}
+.feedback{margin-top:14px;padding:15px;border-radius:13px;line-height:1.65}.correct{background:var(--green-bg)}.incorrect{background:var(--red-bg)}
+.feedback h3{margin:0 0 5px;font-size:16px}.feedback p{margin:5px 0;font-size:14px}
+button,.btn{border:0;border-radius:11px;padding:11px 15px;background:#202631;color:white;font-weight:650;cursor:pointer;font-size:14px}
+button.secondary,.btn.secondary{background:#eef1f5;color:#303946}button.green{background:var(--green)}
+button:disabled{opacity:.45;cursor:default}
+.controls{display:flex;flex-wrap:wrap;gap:8px}
+select,input,textarea{font:inherit;border:1px solid var(--line);border-radius:10px;padding:10px;background:white;color:var(--ink);max-width:100%}
+select{width:100%}.field{display:grid;gap:6px;margin:12px 0}.field label{font-size:13px;color:var(--muted)}
+textarea{width:100%;min-height:76px;resize:vertical}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}.stat{background:#f7f8fa;border-radius:12px;padding:11px;text-align:center}.stat b{display:block;font-size:20px}.stat span{font-size:11px;color:var(--muted)}
+.hidden{display:none!important}.small{font-size:12px;color:var(--muted);line-height:1.6}
+.list{display:grid;gap:8px}.item{border:1px solid var(--line);border-radius:12px;padding:12px}.item p{margin:5px 0;font-size:14px;line-height:1.6}
+footer{margin-top:18px;text-align:center}
+@media(max-width:420px){main{padding:14px 12px 36px}.question{font-size:17px;min-height:130px}.panel,.card{padding:15px}}
+</style>
+</head>
+<body>
+<main>
+<header><h1>産業カウンセラー Quiz</h1><span class="tag">v0.6 ・ 個人学習用</span></header>
+
+<div id="storageStatus" class="small" role="status" style="margin:-10px 0 14px">保存領域を確認中…</div>
+<section id="home" class="panel">
+ <div class="row"><b>学習メニュー</b><span class="muted" id="totalLabel"></span></div>
+ <div class="field"><label for="category">出題する分野</label><select id="category"><option value="all">すべての分野</option></select></div>
+ <div class="field"><label for="mode">出題範囲</label><select id="mode"><option value="all">すべての問題</option><option value="weak">過去に間違えた問題だけ</option><option value="unanswered">未回答の問題だけ</option></select></div>
+ <div class="field"><label for="questionLimit">1セットの問題数</label><select id="questionLimit"><option value="10">10問</option><option value="50">50問</option><option value="100">100問</option><option value="all">登録済みの全問題</option></select></div>
+ <div class="controls"><button class="green" id="start">学習を始める</button><button class="secondary" id="shuffle">ランダム出題で始める</button></div>
+ <div class="stats"><div class="stat"><b id="totalWrongStat">0</b><span>累計誤答回数</span></div><div class="stat"><b id="answeredStat">0</b><span>回答済み</span></div><div class="stat"><b id="accuracyStat">—</b><span>正答率</span></div><div class="stat"><b id="weakStat">0</b><span>苦手問題</span></div></div>
+</section>
+
+<section id="quiz" class="panel hidden">
+ <div class="row"><span class="muted" id="categoryLabel"></span><span class="muted" id="counter"></span></div>
+ <div class="progress"><div class="bar" id="progress"></div></div>
+ <p class="kicker" id="questionNumber"></p><p class="small" id="wrongHistory"></p>
+ <div class="question" id="questionText"></div>
+ <p class="kicker">この記述は正しい？</p>
+ <div class="answers">
+  <button class="answer yes" id="trueBtn"><strong>○</strong>正しい</button>
+  <button class="answer no" id="falseBtn"><strong>×</strong>誤り</button>
+ </div>
+ <div id="feedback" class="feedback hidden" aria-live="polite"></div>
+ <div class="row" style="margin-top:15px"><button class="secondary" id="quit">メニューへ</button><button class="green" id="next" disabled>次の問題へ →</button></div>
+</section>
+
+<section id="result" class="panel hidden">
+ <h2 style="margin:0 0 8px">今回の結果</h2><div class="stats">
+  <div class="stat"><b id="resultCount">0</b><span>回答数</span></div>
+  <div class="stat"><b id="resultCorrect">0</b><span>正解数</span></div>
+  <div class="stat"><b id="resultRate">0%</b><span>正答率</span></div>
+ </div>
+ <div class="controls" style="margin-top:16px"><button class="green" id="reviewWrong">間違えた問題を復習</button><button class="secondary" id="backHome">メニューへ戻る</button></div>
+</section>
+
+<section class="panel">
+ <div class="row"><b>問題データの管理</b><span class="muted" id="dataCount"></span></div>
+ <p class="small">問題はこの端末のブラウザ内に保存されます。公式問題集から入力した問題と、オリジナル問題を同じ形式で管理できます。「過去に間違えた問題だけ」は、一度でも不正解になった問題を抽出します。今回の結果画面からは、今回間違えた問題だけをすぐに解き直せます。</p>
+ <div class="controls">
+  <label class="btn secondary" for="excelFile">Excelを読み込む</label><input id="excelFile" type="file" accept=".xlsx" class="hidden">
+  <button class="secondary" id="export">学習記録をバックアップ</button>
+  <label class="btn secondary" for="importFile">バックアップを復元</label><input id="importFile" type="file" accept=".json,application/json" class="hidden">
+ </div>
+ <p class="small">Excelの1行目に「問題文・正解・解説・ジャンル・出典・問題番号」の見出しを置き、2行目以降に1問ずつ入力してください。正解欄は「○」または「×」。出典と問題番号は省略できます。読み込み時に追加・更新・除外予定の件数を確認できます。同じ出典＋問題番号の学習履歴は維持されます。</p>
+ <details style="margin-top:14px"><summary style="cursor:pointer;font-weight:650">問題を1問追加する</summary>
+  <div class="field"><label for="newCategory">分野</label><input id="newCategory" placeholder="例：労働関係法令"></div>
+  <div class="field"><label for="newSource">出典</label><select id="newSource"><option>オリジナル問題</option><option>公式問題集</option></select></div>
+  <div class="field"><label for="newQuestion">問題文</label><textarea id="newQuestion" placeholder="問題文を入力"></textarea></div>
+  <div class="field"><label for="newAnswer">正答</label><select id="newAnswer"><option value="true">○ 正しい</option><option value="false">× 誤り</option></select></div>
+  <div class="field"><label for="newExplanation">解説</label><textarea id="newExplanation" placeholder="正答の根拠や補足"></textarea></div>
+  <button class="green" id="addQuestion">問題を追加</button>
+ </details>
+</section>
+<footer class="small">学習記録はブラウザのIndexedDBに保存されます（利用不可の場合はローカルストレージ）。端末変更やブラウザのデータ消去に備え、「学習記録をバックアップ」から定期的に保存してください。</footer>
+</main>
+<script>
+const KEY='industrialCounselorQuiz_v1';
+const DBNAME='industrialCounselorQuiz_v06', DBSTORE='snapshot';
+let db=null, persistMode='indexeddb', writeChain=Promise.resolve();
+const sample=[
+{id:1,category:'労働関係法令',question:'労働基準法は、労働条件の最低基準を定めている。',answer:true,explanation:'労働基準法第1条は、労働条件は労働者が人たるに値する生活を営むための必要を満たすべきものとし、法で定める基準を最低基準としています。',source:'オリジナル問題'},
+{id:2,category:'カウンセリング理論',question:'ロジャーズは精神分析療法を提唱した。',answer:false,explanation:'ロジャーズは来談者中心療法（ person-centered approach ）を提唱しました。',source:'オリジナル問題'},
+{id:3,category:'産業・組織',question:'組織における公式なコミュニケーション経路だけでなく、非公式なコミュニケーションも存在する。',answer:true,explanation:'職場では公式な報告・連絡経路のほか、日常的な非公式ネットワークも情報伝達に影響します。',source:'オリジナル問題'}
+];
+let state=load(), queue=[], pos=0, session=[];
+function load(){try{const x=JSON.parse(localStorage.getItem(KEY))||{questions:sample,history:{}};x.questions ||= sample;x.history ||= {};return x}catch(e){return{questions:sample,history:{}}}}
+function save(){
+ const snapshot=JSON.stringify(state);
+ writeChain=writeChain.catch(()=>{}).then(async()=>{
+  if(db){try{await new Promise((resolve,reject)=>{const tx=db.transaction(DBSTORE,'readwrite');tx.objectStore(DBSTORE).put(snapshot,'main');tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error)});return}catch(e){console.error(e);persistMode='localStorage'}}
+  try{localStorage.setItem(KEY,snapshot)}catch(e){el('storageStatus').textContent='⚠ 保存に失敗しました。バックアップしてください。';console.error(e)}
+ });return writeChain;
+}
+async function initStorage(){
+ try{
+  db=await new Promise((resolve,reject)=>{const req=indexedDB.open(DBNAME,1);req.onupgradeneeded=()=>req.result.createObjectStore(DBSTORE);req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)});
+  const raw=await new Promise((resolve,reject)=>{const tx=db.transaction(DBSTORE,'readonly');const req=tx.objectStore(DBSTORE).get('main');req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)});
+  if(raw){const parsed=JSON.parse(raw);if(Array.isArray(parsed.questions)){state=parsed;normalizeState()}}
+  else {normalizeState();await save()}
+  el('storageStatus').textContent='✓ このブラウザに問題集と学習記録を自動保存します（IndexedDB）';
+ }catch(e){console.error(e);db=null;persistMode='localStorage';normalizeState();el('storageStatus').textContent='⚠ IndexedDBが使えないため簡易保存モードです。定期的にバックアップしてください。'}
+ refresh();
+}
+function normalizeState(){state.questions ||= [];state.history ||= {};for(const h of Object.values(state.history)){if(h.everWrong===undefined)h.everWrong=h.lastCorrect===false;if(h.wrongCount===undefined)h.wrongCount=h.lastCorrect===false?1:0}}
+
+function el(id){return document.getElementById(id)}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function show(id){['home','quiz','result'].forEach(x=>el(x).classList.toggle('hidden',x!==id))}
+
+// Excel（.xlsx）をブラウザ内で読み込む簡易リーダー。外部ライブラリ・通信は不要。
+async function readXlsx(file){
+ const buf=await file.arrayBuffer(), dv=new DataView(buf);
+ let eocd=-1;
+ for(let i=buf.byteLength-22;i>=Math.max(0,buf.byteLength-65558);i--){
+  if(dv.getUint32(i,true)===0x06054b50){eocd=i;break}
+ }
+ if(eocd<0)throw Error('Excelファイル（ZIP形式）を読み取れません');
+ const count=dv.getUint16(eocd+10,true), cdOffset=dv.getUint32(eocd+16,true);
+ const entries={};let p=cdOffset;
+ for(let i=0;i<count;i++){
+  if(dv.getUint32(p,true)!==0x02014b50)throw Error('Excelファイルの構造が不正です');
+  const method=dv.getUint16(p+10,true), compSize=dv.getUint32(p+20,true);
+  const nameLen=dv.getUint16(p+28,true), extraLen=dv.getUint16(p+30,true), commentLen=dv.getUint16(p+32,true);
+  const localOffset=dv.getUint32(p+42,true);
+  const name=new TextDecoder().decode(new Uint8Array(buf,p+46,nameLen));
+  entries[name]={method,compSize,localOffset};
+  p+=46+nameLen+extraLen+commentLen;
+ }
+ async function unzip(name){
+  const ent=entries[name];if(!ent) return null;
+  const o=ent.localOffset, nlen=dv.getUint16(o+26,true), elen=dv.getUint16(o+28,true);
+  const start=o+30+nlen+elen, compressed=buf.slice(start,start+ent.compSize);
+  if(ent.method===0)return compressed;
+  if(ent.method!==8)throw Error('未対応の圧縮形式です');
+  const ds=new DecompressionStream('deflate-raw');
+  return await new Response(new Blob([compressed]).stream().pipeThrough(ds)).arrayBuffer();
+ }
+ const decoder=new TextDecoder();
+ const xml=async name=>{const b=await unzip(name);return b?new DOMParser().parseFromString(decoder.decode(b),'application/xml'):null};
+ const workbook=await xml('xl/workbook.xml');
+ const rels=await xml('xl/_rels/workbook.xml.rels');
+ if(!workbook||!rels)throw Error('Excelのワークシートが見つかりません');
+ const nodes=(doc,name)=>[...doc.getElementsByTagNameNS('*',name)];
+ const firstSheet=nodes(workbook,'sheet')[0];
+ if(!firstSheet)throw Error('シートがありません');
+ const relId=firstSheet.getAttribute('r:id');
+ const relation=nodes(rels,'Relationship').find(x=>x.getAttribute('Id')===relId);
+ if(!relation)throw Error('シートの参照先が見つかりません');
+ let target=relation.getAttribute('Target').replace(/^\/?/, '');
+ let sheetPath=target.startsWith('xl/')?target:'xl/'+target.replace(/^(\.\.\/)+/,'');
+ const sheet=await xml(sheetPath);
+ if(!sheet)throw Error('シートを読み込めません');
+ const ssXml=await xml('xl/sharedStrings.xml');
+ const shared=ssXml?nodes(ssXml,'si').map(si=>nodes(si,'t').map(t=>t.textContent).join('')):[];
+ const rows=nodes(sheet,'row');
+ return rows.map(row=>{
+  const cells=[];
+  for(const c of nodes(row,'c')){
+   const ref=c.getAttribute('r')||'', col=(ref.match(/[A-Z]+/)||['A'])[0];
+   let idx=0;for(const ch of col)idx=idx*26+ch.charCodeAt(0)-64;idx--;
+   const v=nodes(c,'v')[0], inline=nodes(c,'is')[0];
+   let value='';
+   if(c.getAttribute('t')==='s'&&v)value=shared[Number(v.textContent)]??'';
+   else if(c.getAttribute('t')==='inlineStr'&&inline)value=nodes(inline,'t').map(t=>t.textContent).join('');
+   else if(v)value=v.textContent;
+   cells[idx]=value;
+  }
+  return cells;
+ });
+}
+function truthValue(v){
+ const s=String(v??'').trim().toLowerCase();
+ if(['○','〇','◯','o','正しい','true','1','正','〇 正しい'].includes(s))return true;
+ if(['×','✕','x','誤り','false','0','誤','× 誤り'].includes(s))return false;
+ return null;
+}
+
+function refresh(){
+ const selected=el('category').value;
+ const cats=[...new Set(state.questions.map(q=>q.category||'未分類'))].sort();
+ el('category').innerHTML='<option value="all">すべての分野</option>'+cats.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+ if(cats.includes(selected))el('category').value=selected;
+ const histories=state.questions.map(q=>state.history[q.id]).filter(Boolean), answered=histories.length;
+ const total=histories.reduce((n,h)=>n+(h.count||0),0), correct=histories.reduce((n,h)=>n+Math.max(0,(h.count||0)-(h.wrongCount||0)),0);
+ el('totalLabel').textContent=`${state.questions.length}問登録`;el('dataCount').textContent=`${state.questions.length}問`;
+ el('answeredStat').textContent=answered;el('accuracyStat').textContent=total?Math.round(correct/total*100)+'%':'—';
+ el('weakStat').textContent=histories.filter(h=>h.everWrong||h.wrongCount>0).length;
+ el('totalWrongStat').textContent=histories.reduce((n,h)=>n+(Number(h.wrongCount)||0),0);
+}
+function begin(weakOnly=false,shuffle=false){
+ const cat=el('category').value, mode=weakOnly?'weak':el('mode').value, limit=el('questionLimit').value;
+ queue=state.questions.filter(q=>(cat==='all'||q.category===cat)&&(mode!=='weak'||state.history[q.id]?.everWrong||state.history[q.id]?.wrongCount>0)&&(mode!=='unanswered'||!state.history[q.id]));
+ if(shuffle){for(let i=queue.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[queue[i],queue[j]]=[queue[j],queue[i]]}}
+ else queue.sort((a,b)=>{const x=Number(a.number),y=Number(b.number);return Number.isFinite(x)&&x>0&&Number.isFinite(y)&&y>0?x-y:(Number.isFinite(x)&&x>0?-1:Number.isFinite(y)&&y>0?1:String(a.id).localeCompare(String(b.id)))});
+ if(limit!=='all')queue=queue.slice(0,Number(limit));
+ pos=0;session=[];if(!queue.length){alert('該当する問題がありません。');return}show('quiz');render();
+}
+function render(){
+ const q=queue[pos];el('categoryLabel').textContent=q.category+' ・ '+(q.source||'出典未設定');
+ el('counter').textContent=`${pos+1} / ${queue.length}`;el('questionNumber').textContent=q.number?`問題集 No.${q.number}（今回 ${pos+1}問目）`:`今回 第${pos+1}問（問題集番号なし）`;
+ const h=state.history[q.id];el('wrongHistory').textContent=`この問題の累計誤答：${h?.wrongCount??0}回 / 回答：${h?.count||0}回`;
+ el('questionText').textContent=q.question;el('progress').style.width=(pos/queue.length*100)+'%';
+ el('feedback').className='feedback hidden';el('feedback').textContent='';
+ el('trueBtn').disabled=false;el('falseBtn').disabled=false;el('next').disabled=true;
+ el('next').textContent=pos===queue.length-1?'結果を見る':'次の問題へ →';
+}
+function answer(value){
+ const q=queue[pos], correct=value===q.answer, previous=state.history[q.id]||{};
+ state.history[q.id]={lastCorrect:correct,everWrong:previous.everWrong||!correct,lastAnswer:value,answeredAt:new Date().toISOString(),count:(previous.count||0)+1,wrongCount:(previous.wrongCount||0)+(!correct?1:0)};
+ save();session.push({q,correct});el('trueBtn').disabled=true;el('falseBtn').disabled=true;el('next').disabled=false;
+ el('feedback').className='feedback '+(correct?'correct':'incorrect');
+ el('wrongHistory').textContent=`この問題の累計誤答：${state.history[q.id].wrongCount}回 / 回答：${state.history[q.id].count}回`;
+ el('feedback').innerHTML=`<h3>${correct?'✓ 正解！':'× 不正解'}</h3><p><b>正答：${q.answer?'○ 正しい':'× 誤り'}</b></p><p>${escapeHtml(q.explanation||'解説は未登録です。')}</p>`;refresh();
+}
+function next(){if(pos<queue.length-1){pos++;render()}else finish()}
+function finish(){show('result');const n=session.length,c=session.filter(x=>x.correct).length;el('resultCount').textContent=n;el('resultCorrect').textContent=c;el('resultRate').textContent=n?Math.round(c/n*100)+'%':'0%';el('progress').style.width='100%'}
+el('start').onclick=()=>begin();el('shuffle').onclick=()=>begin(false,true);
+el('trueBtn').onclick=()=>answer(true);el('falseBtn').onclick=()=>answer(false);el('next').onclick=next;
+el('quit').onclick=()=>{show('home');refresh()};el('backHome').onclick=()=>{show('home');refresh()};
+el('reviewWrong').onclick=()=>{const missed=new Set(session.filter(x=>!x.correct).map(x=>x.q.id));if(!missed.size){alert('今回、間違えた問題はありませんでした！');return}queue=state.questions.filter(q=>missed.has(q.id));pos=0;session=[];show('quiz');render()};
+function normalizedText(s){return String(s||'').trim().replace(/\s+/g,' ')}
+function stableKey(q){return q.number!==null&&q.number!==undefined&&String(q.number).trim()!==''&&q.source?String(q.source).trim()+'\u0001'+String(q.number).trim():null}
+function validateQuestions(items){const seen=new Set();for(const q of items){if(!q.question||typeof q.answer!=='boolean')throw Error('問題文または正答に不備があります');const k=stableKey(q);if(k){if(seen.has(k))throw Error('同じ出典と問題番号が重複しています：'+q.source+' No.'+q.number);seen.add(k)}}}
+el('addQuestion').onclick=async()=>{
+ const category=el('newCategory').value.trim(),question=el('newQuestion').value.trim();if(!category||!question){alert('分野と問題文を入力してください。');return}
+ if(state.questions.some(q=>normalizedText(q.question)===normalizedText(question))){alert('同じ問題文が登録済みです。');return}
+ const id=Math.max(0,...state.questions.map(q=>Number(q.id)||0))+1;
+ state.questions.push({id,category,question,answer:el('newAnswer').value==='true',explanation:el('newExplanation').value.trim(),source:el('newSource').value,manual:true});
+ await save();el('newCategory').value='';el('newQuestion').value='';el('newExplanation').value='';refresh();alert('問題を追加しました。');
+};
+el('export').onclick=()=>{
+ const blob=new Blob([JSON.stringify({...state,backupVersion:'0.6',exportedAt:new Date().toISOString()},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+ a.href=url;a.download='industrial-counselor-quiz-backup.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),3000);
+};
+el('excelFile').onchange=async e=>{
+ const file=e.target.files[0];if(!file)return;
+ try{
+  const rows=await readXlsx(file);if(rows.length<2)throw Error('問題データがありません');
+  const headers=rows[0].map(x=>String(x??'').trim()),findCol=names=>headers.findIndex(h=>names.includes(h));
+  const qi=findCol(['問題文','問題','設問']),ai=findCol(['正解','答え','解答']),ei=findCol(['解説']),ci=findCol(['ジャンル','分野']),si=findCol(['出典']),ni=findCol(['問題番号','通し番号','番号']);
+  if(qi<0||ai<0)throw Error('1行目に「問題文」と「正解」の見出しが必要です');
+  const imported=[];
+  for(let r=1;r<rows.length;r++){
+   const row=rows[r]||[],question=String(row[qi]??'').trim(),answer=truthValue(row[ai]);if(!question)continue;
+   if(answer===null)throw Error(`${r+1}行目の正解は「○」または「×」で入力してください`);
+   const number=ni>=0?String(row[ni]??'').trim():'';
+   imported.push({category:ci>=0?String(row[ci]??'').trim()||'未分類':'未分類',question,answer,explanation:ei>=0?String(row[ei]??'').trim():'',source:si>=0?String(row[si]??'').trim()||'公式問題集':'公式問題集',number:number||null});
+  }
+  if(!imported.length)throw Error('読み込める問題がありません');validateQuestions(imported);
+  const current=state.questions, used=new Set(), updates=[], additions=[], ambiguous=[];
+  for(const q of imported){
+   const key=stableKey(q);
+   let old=key?current.find(x=>stableKey(x)===key):null;
+   if(!old){const candidates=current.filter(x=>!used.has(x.id)&&normalizedText(x.question)===normalizedText(q.question));if(candidates.length===1)old=candidates[0];else if(candidates.length>1)ambiguous.push(q)}
+   if(old){if(used.has(old.id))throw Error('Excel内の複数行が同じ登録済み問題に対応しています');used.add(old.id);updates.push({old,q})}else additions.push(q);
+  }
+  if(ambiguous.length)throw Error('同じ問題文の登録が複数あり、対応を確定できません');
+  // 部分的なExcelの読み込みで、他の問題を誤って消さないため既存の未掲載問題は残す。
+  const changed=updates.filter(({old,q})=>['category','question','answer','explanation','source','number'].some(k=>String(old[k]??'')!==String(q[k]??''))).length;
+  const retained=current.length-updates.length;
+  if(!confirm(`Excel ${imported.length}問を確認しました。\n新規追加：${additions.length}問\n既存問題の内容更新：${changed}問\n変更なし：${updates.length-changed}問\nExcelに含まれない既存問題：${retained}問（残します）\n\n学習履歴は維持して反映します。よろしいですか？`))return;
+  for(const {old,q} of updates)Object.assign(old,q);
+  let nextId=Math.max(0,...current.map(q=>Number(q.id)||0))+1;
+  for(const q of additions)current.push({...q,id:nextId++});
+  await save();refresh();alert(`読み込み完了：${additions.length}問追加、${changed}問更新。学習履歴は保持しました。`);
+ }catch(err){alert('Excelの読み込みに失敗しました。\n'+(err.message||'ファイル形式を確認してください'))}finally{e.target.value=''}
+};
+el('importFile').onchange=async e=>{
+ const file=e.target.files[0];if(!file)return;
+ try{
+  const data=JSON.parse(await file.text());if(!Array.isArray(data.questions)||!data.history||typeof data.history!=='object')throw Error('バックアップの形式が違います');
+  validateQuestions(data.questions);
+  if(!confirm('現在の問題・学習記録をバックアップの内容で置き換えます。よろしいですか？'))return;
+  state={questions:data.questions,history:data.history};normalizeState();await save();refresh();alert('バックアップを復元しました。');
+ }catch(err){alert('復元に失敗しました。'+(err.message||'JSON形式を確認してください'))}finally{e.target.value=''}
+};
+initStorage();
+</script>
+</body></html>
